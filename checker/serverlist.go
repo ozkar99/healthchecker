@@ -1,8 +1,8 @@
 package checker
 
 import (
-    "sync"
-    "net/http"
+	"sync"
+	"net/http"
 	"fmt"
 )
 
