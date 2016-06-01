@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"healthcheck/checker"
+	"healthchecker/checker"
 )
 
 func main() {
