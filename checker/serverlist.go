@@ -4,6 +4,7 @@ import (
 	"sync"
 	"net/http"
 	"fmt"
+	"errors"
 )
 
 type ServerList []Server
@@ -21,6 +22,11 @@ func (servers ServerList) Failed() ServerList {
 			/* Test if site is up, send failed down the channel */
 			resp, err := http.Get(s.SchemaDomain())
 			if err != nil || resp.StatusCode != http.StatusOK {
+				if err != nil {
+					s.Error = err
+				} else {
+					s.Error = errors.New("Response Status is not 200 OK")
+				}
 				c <- s
 			}
 			wg.Done()
