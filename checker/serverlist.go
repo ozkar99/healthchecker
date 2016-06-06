@@ -10,7 +10,7 @@ import (
 type ServerList []Server
 
 func (servers ServerList) Failed() ServerList {
-	var wg sync.WaitGroup
+	var wg = &sync.WaitGroup{}
 	failedServerList := make(ServerList, 0)
 	
 	ch := make(chan Server)
@@ -18,7 +18,7 @@ func (servers ServerList) Failed() ServerList {
 
 	for _, server := range servers {
 		/* Fan In */
-		go func(c chan Server, s Server) {
+		go func(c chan Server, s Server, w *sync.WaitGroup) {
 			/* Test if site is up, send failed down the channel */
 			resp, err := http.Get(s.SchemaDomain())
 			if err != nil || resp.StatusCode != http.StatusOK {
@@ -29,8 +29,8 @@ func (servers ServerList) Failed() ServerList {
 				}
 				c <- s
 			}
-			wg.Done()
-		}(ch, server)
+			w.Done()
+		}(ch, server, wg)
 	}
 
 	/* Fan Out */
