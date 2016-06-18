@@ -27,6 +27,6 @@ func main() {
 
 	if len(failedHosts) > 0 {
 		fmt.Println("Failed Hosts:")
-		failedHosts.Print()
+		checker.PrintServers(failedHosts)
 	}
 }

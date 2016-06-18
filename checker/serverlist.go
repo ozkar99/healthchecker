@@ -3,22 +3,26 @@ package checker
 import (
 	"sync"
 	"net/http"
-	"fmt"
 	"errors"
 )
 
-type ServerList []Server
+type ServerList struct {
+	Servers []Server
+	sync.WaitGroup
+	comm chan Server
+}
 
-func (servers ServerList) Failed() ServerList {
-	var wg = &sync.WaitGroup{}
-	failedServerList := make(ServerList, 0)
+func (sl *ServerList) Init() {
+	sl.comm = make(chan Server)
+	sl.Add(len(sl.Servers)) //initalize embedded waitgroup
+} 
+
+func (serverList ServerList) Failed() []Server {
+	failedServerList := make([]Server, 0)
 	
-	ch := make(chan Server)
-	wg.Add(len(servers))
-
-	for _, server := range servers {
+	for _, server := range serverList.Servers {
 		/* Fan In */
-		go func(c chan Server, s Server, w *sync.WaitGroup) {
+		go func(s Server) {
 			/* Test if site is up, send failed down the channel */
 			resp, err := http.Get(s.SchemaDomain())
 			if err != nil || resp.StatusCode != http.StatusOK {
@@ -27,27 +31,21 @@ func (servers ServerList) Failed() ServerList {
 				} else {
 					s.Error = errors.New("Response Status is not 200 OK")
 				}
-				c <- s
+				serverList.comm <- s
 			}
-			w.Done()
-		}(ch, server, wg)
+			serverList.Done()
+		}(server)
 	}
 
 	/* Fan Out */
-	go func(c chan Server) {
+	go func() {
 		/*Append failed servers*/
 		for {
-			s := <-c
+			s := <-serverList.comm
 			failedServerList = append(failedServerList, s)
 		}
-	}(ch)
+	}()
 
-	wg.Wait()
+	serverList.Wait()
 	return failedServerList
-}
-
-func (servers ServerList) Print() {
-	for _, server := range servers {
-		fmt.Println(server.String())
-	}
 }
